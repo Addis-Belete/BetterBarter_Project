@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+/**
+ * @notice LP get 7% Interest in 100days
+ */
 contract LP {
     //user provide liquidity to Better Barter by using this contract.
 
@@ -14,5 +17,8 @@ contract LP {
      */
     function withdraw() external {}
 
+    /**
+     * @notice User Will claim the accumulated interest by using this function.
+     */
     function claimInterest() external {}
 }
