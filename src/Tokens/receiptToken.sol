@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-contract ReceiptToken {
+import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+
+contract ReceiptToken is ERC20 {
     address internal poolAddress;
     address internal admin;
     string private _name;
