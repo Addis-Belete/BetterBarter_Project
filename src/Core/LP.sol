@@ -65,6 +65,18 @@ contract LP {
     function withdraw(address userAddress, uint256 amount) external checkAddress(userAddress) {
         uint256 withdrawableBalance = getWithdrawableBalance(userAddress);
         require(withdrawableBalance >= amount, "Insufficeint amount");
+		UserInfo[] storage _userInfo = userInfo[userAddress];
+
+		for(uint256 i; i < _userInfo.length; i++){
+			uint256 stakingEndTime = _userInfo[i].stakingEndTime;
+            if (block.timestamp > stakingEndTime) {
+                
+            }
+
+
+
+		}
+
     }
 
     /**
