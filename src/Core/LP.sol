@@ -17,7 +17,6 @@ contract LP {
         uint256 stakingPeriod;
         uint256 amount;
         uint256 stakingEndTime;
-        uint256 interest;
     }
 
     mapping(address => uint256) public userStakingId;
@@ -60,7 +59,7 @@ contract LP {
         require(underlying.transferFrom(userAddress, address(this), amount), "Transfer failed");
         uint256 _stakingId = userStakingId[userAddress]++;
         uint256 _stakingEndTime = block.timestamp + stakingPeriod;
-        UserInfo memory _userInfo = UserInfo(block.timestamp, stakingPeriod, amount, _stakingEndTime, 0);
+        UserInfo memory _userInfo = UserInfo(block.timestamp, stakingPeriod, amount, _stakingEndTime);
         userInfo[userAddress][_stakingId] = _userInfo;
         receiptToken.mint(userAddress, amount);
         emit Deposited(userAddress, amount, stakingPeriod);
@@ -79,7 +78,6 @@ contract LP {
         require(_userInfo.amount >= amount, "Not enough amount on this position");
         uint256 _interest = calculateInterest(amount, _userInfo.initialTime);
         require(underlying.balanceOf(address(this)) >= (amount + _interest), "No enough liquidity");
-        _userInfo.interest = _interest;
         _userInfo.amount -= amount;
         receiptToken.burn(userAddress, amount);
         require(underlying.transfer(userAddress, (amount + _interest)), "Transfer failed");
