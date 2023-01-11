@@ -34,7 +34,7 @@ contract PriceProtection is Oracle {
     function lockCollateral(address userAddress, uint256 amount, uint256 stakingPeriod)
         external
         onlyBetterAddress(msg.sender)
-        returns (int256)
+        returns (bool, uint256)
     {
         uint256 collateralId = userCollateralIds[userAddress]++;
 
@@ -46,7 +46,7 @@ contract PriceProtection is Oracle {
         collateral[userAddress][collateralId] = _collateralInfo;
 
         receiptToken.mint(userAddress, amount);
-        return assetPriceInUSD;
+        return (true, uint256(assetPriceInUSD));
     }
 }
 

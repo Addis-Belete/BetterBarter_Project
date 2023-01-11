@@ -29,11 +29,13 @@ contract LPWallet is Oracle {
     /**
      * @notice Used to transfer underlying to the better barter contract on behalf of user
      */
-    function transferLoan(uint256 ethPrice) external onlyBetterAddress(msg.sender) {
+    function transferLoan(uint256 ethPrice) external onlyBetterAddress(msg.sender) returns (uint256) {
         int256 underlyingPrice = getPriceInUSD(address(underlying));
         uint256 loanAmount = (ethPrice * 75) / 100;
         int256 assetAmount = int256(loanAmount) / (underlyingPrice);
         //check if the collateral is locked in the price protection
         require(underlying.transferFrom((address(this)), betterAddress, uint256(assetAmount)), "Transfer failed");
+
+        return uint256(assetAmount);
     }
 }
