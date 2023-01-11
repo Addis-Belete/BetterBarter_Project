@@ -20,6 +20,9 @@ contract LPWallet {
         underlying = IERC20(_underlying);
     }
 
+    /**
+     * @notice Used to transfer underlying to the better barter contract on behalf of user
+     */
     function transferLoan(address onBehalf, uint256 amount) external onlyPriceProtection(msg.sender) {
         //check if the collateral is locked in the price protection
         underlying.transferFrom((address(this)), betterAddress, amount);
