@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../../lib/chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "../Helpers/Oracle.sol";
 import "../Interfaces/IReceiptToken.sol";
 // This contract is responsible for price protection.
 
-contract PriceProtection {
+contract PriceProtection is Oracle {
     struct CollateralInfo {
         int256 priceInUSD;
         uint256 stakingPeriod;
@@ -46,11 +47,6 @@ contract PriceProtection {
 
         receiptToken.mint(userAddress, amount);
         return assetPriceInUSD;
-    }
-
-    function getPriceInUSD(address _oracle) internal view returns (int256) {
-        (, int256 price,,,) = AggregatorV3Interface(_oracle).latestRoundData();
-        return price;
     }
 }
 

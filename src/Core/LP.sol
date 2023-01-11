@@ -7,6 +7,7 @@ import "../Interfaces/IReceiptToken.sol";
 /**
  * @notice LP get 7% Interest in 100days
  * user provide liquidity to Better Barter by using this contract.
+ * The Asset stored in LP wallet (fixed later)
  */
 contract LP {
     /**
