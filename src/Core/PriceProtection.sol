@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import "../../lib/chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "../Interfaces/IReceiptToken.sol";
 // This contract is responsible for price protection.
+
 contract PriceProtection {
     struct CollateralInfo {
-        uint256 priceInUSD;
+        int256 priceInUSD;
         uint256 stakingPeriod;
         uint256 amount;
         uint256 initailTime;
@@ -15,34 +18,40 @@ contract PriceProtection {
     mapping(address => uint256) internal userCollateralIds;
     address internal betterAddress;
     address internal underlying;
+    IReceiptToken internal receiptToken;
 
     modifier onlyBetterAddress(address _addr) {
         require(msg.sender == _addr, "Only called by Better address");
         _;
     }
 
-    constructor(address _betterAddress) {
+    constructor(address _betterAddress, address _receiptTokenaddress) {
         betterAddress = _betterAddress;
+        receiptToken = IReceiptToken(_receiptTokenaddress);
     }
 
     function lockCollateral(address userAddress, uint256 amount, uint256 stakingPeriod)
         external
         onlyBetterAddress(msg.sender)
-        returns (uint256)
+        returns (int256)
     {
         uint256 collateralId = userCollateralIds[userAddress]++;
 
-        uint256 assetPriceInUSD = getPriceInUSD(underlying) * amount;
+        int256 assetPriceInUSD = (getPriceInUSD(underlying)) * int256(amount);
 
         CollateralInfo memory _collateralInfo =
             CollateralInfo(assetPriceInUSD, stakingPeriod, amount, block.timestamp, true);
 
         collateral[userAddress][collateralId] = _collateralInfo;
 
+        receiptToken.mint(userAddress, amount);
         return assetPriceInUSD;
     }
 
-    function getPriceInUSD(address addr) internal returns (uint256) {}
+    function getPriceInUSD(address _oracle) internal view returns (int256) {
+        (, int256 price,,,) = AggregatorV3Interface(_oracle).latestRoundData();
+        return price;
+    }
 }
 
 /**
