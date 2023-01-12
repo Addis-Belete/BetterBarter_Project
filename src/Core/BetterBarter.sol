@@ -5,7 +5,9 @@ import "../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/ICruise.sol";
 import "../interfaces/IPriceProtection.sol";
 
-contract BetterBarter {
+import "../Helpers/Exchange.sol";
+
+contract BetterBarter is Exchange {
     //Responsible for the main logic of the Better Barter APP.
 
     struct CallOption {
@@ -24,13 +26,21 @@ contract BetterBarter {
     address internal priceProtectionAddress;
     address internal wETH;
     address internal crETH;
+    address internal underlying;
     address internal LPWalletAddress;
 
     event NewAssetDepositedForCallOption(
         address indexed owner, uint256 indexed amount, uint256 strikePrice, uint256 deadline
     );
 
-    constructor(address _cruiseAddress, address _priceProtectionAddress, address _weth, address _LPWalletAddress) {
+    constructor(
+        address _cruiseAddress,
+        address _priceProtectionAddress,
+        address _weth,
+        address _LPWalletAddress,
+        address _routerAddress,
+        address _qouterAddress
+    ) Exchange(_routerAddress, _qouterAddress) {
         cruise = ICruise(_cruiseAddress);
         priceProtectionAddress = _priceProtectionAddress;
         wETH = _weth;
@@ -56,7 +66,7 @@ contract BetterBarter {
 
         uint256 loanAmount = ILPWallet(LPWalletAddress).transferLoan(assetPrice);
 
-        uint256 swappedEthAmount = swap(loanAmount);
+        uint256 swappedEthAmount = swap(address(this), underlying, wETH, loanAmount, block.timestamp + 5 minutes);
         if (stakingPeriod == 7 days) {
             strikePrice = assetPrice + (assetPrice * 14) / 100;
         } else if (stakingPeriod == 15 days) {
@@ -80,6 +90,4 @@ contract BetterBarter {
     function withdrawEth() external {}
 
     function BuyCallOption() external {}
-
-    function swap(uint256 amount) internal returns (uint256) {}
 }
