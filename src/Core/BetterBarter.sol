@@ -42,6 +42,8 @@ contract BetterBarter is Exchange, Oracle {
 
     event CallOptionSold(uint256 indexed callOptionId, address buyer);
 
+    event StrikePricePayed(uint256 indexed _callOptionId);
+
     constructor(
         address _cruiseAddress,
         address _priceProtectionAddress,
@@ -124,7 +126,24 @@ contract BetterBarter is Exchange, Oracle {
     }
 
     function payStrikePrice(uint256 _callOptionId) external {
-        // Tobe Continued
+        CallOption storage _callOption = callOptions[_callOptionId];
+        require(block.timestamp < _callOption.deadline, "Expired");
+        require(_callOption.buyer == msg.sender, "Not buyer");
+        require(!_callOption.isFullyPayed, "Fully piad on this call option");
+
+        int256 _underlyingPrice = getPriceInUSD(usdcOracleAddress);
+        uint256 strikePrice = _callOption.amount;
+
+        uint256 strikeInToken = strikePrice / uint256(_underlyingPrice);
+
+        require(IERC20(underlying).transfer(address(this), strikeInToken), "Transfer failed");
+
+        _callOption.isFullyPayed = true;
+
+        (bool success,) = (msg.sender).call{value: _callOption.amount}("");
+        require(success, "Transfer failed");
+
+        emit StrikePricePayed(_callOptionId);
     }
 
     function calculateStrikePrice(int256 _price, uint256 stakingPeriod) internal pure returns (uint256 strikePrice) {
