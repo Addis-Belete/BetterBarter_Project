@@ -13,6 +13,7 @@ contract PriceProtection is Oracle {
         uint256 amount;
         uint256 initailTime;
         bool isLocked;
+        uint256 callOptionId;
     }
 
     mapping(address => mapping(uint256 => CollateralInfo)) public collateral; // address => collateralId => CollateralInfo
@@ -31,22 +32,22 @@ contract PriceProtection is Oracle {
         receiptToken = IReceiptToken(_receiptTokenaddress);
     }
 
-    function lockCollateral(address userAddress, uint256 amount, uint256 stakingPeriod)
+    function lockCollateral(address userAddress, uint256 amount, uint256 stakingPeriod, uint256 callOptionId)
         external
         onlyBetterAddress(msg.sender)
-        returns (bool, uint256)
+        returns (bool, uint256, uint256)
     {
         uint256 collateralId = userCollateralIds[userAddress]++;
 
         int256 assetPriceInUSD = (getPriceInUSD(underlying)) * int256(amount);
 
         CollateralInfo memory _collateralInfo =
-            CollateralInfo(assetPriceInUSD, stakingPeriod, amount, block.timestamp, true);
+            CollateralInfo(assetPriceInUSD, stakingPeriod, amount, block.timestamp, true, callOptionId);
 
         collateral[userAddress][collateralId] = _collateralInfo;
 
         receiptToken.mint(userAddress, amount);
-        return (true, uint256(assetPriceInUSD));
+        return (true, uint256(assetPriceInUSD), collateralId);
     }
 }
 

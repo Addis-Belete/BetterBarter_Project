@@ -2,9 +2,9 @@
 pragma solidity ^0.8.13;
 
 interface IPriceProtection {
-    function lockCollateral(address userAddress, uint256 amount, uint256 stakingPeriod)
+    function lockCollateral(address userAddress, uint256 amount, uint256 stakingPeriod, uint256 callOptionId)
         external
-        returns (bool, uint256);
+        returns (bool, uint256, uint256);
 }
 
 interface ILPWallet {
