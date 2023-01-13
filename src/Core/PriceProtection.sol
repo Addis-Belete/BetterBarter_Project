@@ -22,6 +22,10 @@ contract PriceProtection is Oracle {
     address internal underlying;
     IReceiptToken internal receiptToken;
     address internal admin;
+    address internal crETH;
+
+    event CollateralLocked(address userAddress, uint256 amount);
+    event CollateralUnLocked(address owner, uint256 amount);
 
     modifier onlyBetterAddress() {
         require(msg.sender == betterAddress, "Only called by Better address");
@@ -55,13 +59,19 @@ contract PriceProtection is Oracle {
 
         receiptToken.mint(userAddress, amount);
         return (true, uint256(assetPriceInUSD), collateralId);
+        emit CollateralLocked(userAddress, amount);
     }
 
-    function repayDebt(address userAddress, uint256 collateralId) external onlyBetterAddress {
+    function unLockCollateral(address userAddress, uint256 collateralId) external onlyBetterAddress returns (uint256) {
         CollateralInfo storage _collateral = collateral[userAddress][collateralId];
-        delete _collateral.amount;
-        delete _collateral.callOptionId;
-        delete _collateral.isLocked;
+        require(_collateral.isLocked, "Collateral not available");
+        require(receiptToken.balanceOf(userAddress) >= _collateral.amount, "Not enough fund");
+        receiptToken.burn(userAddress, _collateral.amount);
+        _collateral.isLocked = false;
+
+        require(IERC20(crETH).transferFrom(address(this), betterAddress, _collateral.amount), "Transfer failed");
+        return _collateral.amount;
+        emit CollateralUnLocked(userAddress, _collateral.amount);
     }
 
     function setBetterBarterAddress(address _betterBarterAddress) external onlyAdmin {}

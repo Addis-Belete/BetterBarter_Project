@@ -22,6 +22,7 @@ contract BetterBarter is Exchange, Oracle {
         uint256 premiumPrice;
         uint256 deadline;
         uint256 collateralId;
+        uint256 loanAmount;
     }
 
     mapping(uint256 => CallOption) public callOptions; //address -> callOptionId -> CallOption
@@ -96,7 +97,8 @@ contract BetterBarter is Exchange, Oracle {
             strikePrice,
             _premiumPrice,
             _deadline,
-            _collateralId
+            _collateralId,
+            loanAmount
         );
 
         callOptions[callOptionId] = _callOption;
@@ -104,7 +106,45 @@ contract BetterBarter is Exchange, Oracle {
         emit NewAssetDepositedForCallOption(msg.sender, callOptionId, swappedEthAmount, strikePrice, _deadline);
     }
 
-    function withdrawEth(uint256 _call) external {}
+    //Tobe fixed but for now assume StrikePrice == token amount;
+    function withdrawEth(address userAddress, uint256 _callOptionId) external {
+        CallOption memory _callOption = callOptions[_callOptionId];
+        require(block.timestamp > _callOption.deadline, "Not ready to withdraw");
+        IPriceProtection.CollateralInfo memory _collateral =
+            IPriceProtection(priceProtectionAddress).getCollateralInfo(userAddress, _callOption.collateralId);
+        uint256 interest = calculateInterest(_collateral.initailTime, _callOption.loanAmount);
+
+        if (_callOption.isSold && _callOption.isFullyPayed) {
+            uint256 totalUnderlyingCollacted = _callOption.premiumPrice + _callOption.strikePrice;
+            require(_callOption.loanAmount < totalUnderlyingCollacted, "Error");
+
+            require(
+                IERC20(underlying).transferFrom(address(this), LPWalletAddress, _callOption.loanAmount + interest),
+                "Transfer failed"
+            );
+
+            uint256 releasedAmount =
+                IPriceProtection(priceProtectionAddress).unLockCollateral(userAddress, _callOption.collateralId);
+            uint256 balanceBeforeWithdraw = address(this).balance;
+            cruise.withdraw(releasedAmount, wETH);
+            uint256 amountWithdrawed = address(this).balance - balanceBeforeWithdraw;
+            uint256 profit = totalUnderlyingCollacted - _callOption.loanAmount + interest;
+            uint256 profitInEth = swap(address(this), underlying, wETH, profit, block.timestamp + 5 minutes);
+
+            (bool success,) = (msg.sender.call{value: profitInEth + amountWithdrawed}(""));
+
+            require(success, "Transfer failed");
+        } else if (_callOption.isSold && !_callOption.isFullyPayed) {
+            // convert Eth to USDC;
+            // payLoan
+            // swap the remaining to ETH
+        } else if (!_callOption.isSold && !_callOption.isFullyPayed) {
+            // Convert ETH to USDT
+            // Withdraw ETH From Cruise and convert it USDT
+            // payLoan
+            // Transfer the remaining to user
+        }
+    }
 
     function buyCallOption(uint256 _callOptionId) external {
         CallOption storage _callOption = callOptions[_callOptionId];
@@ -129,7 +169,7 @@ contract BetterBarter is Exchange, Oracle {
         CallOption storage _callOption = callOptions[_callOptionId];
         require(block.timestamp < _callOption.deadline, "Expired");
         require(_callOption.buyer == msg.sender, "Not buyer");
-        require(!_callOption.isFullyPayed, "Fully piad on this call option");
+        require(!_callOption.isFullyPayed, "Arleady paid");
 
         int256 _underlyingPrice = getPriceInUSD(usdcOracleAddress);
         uint256 strikePrice = _callOption.amount;
@@ -156,5 +196,12 @@ contract BetterBarter is Exchange, Oracle {
         } else {
             strikePrice = uint256(_price) + (uint256(_price) * 200) / 100;
         }
+    }
+
+    function calculateInterest(uint256 initialStakingTime, uint256 loanAmount) internal view returns (uint256) {
+        //100days 7%
+        uint256 loanPeriod = block.timestamp - initialStakingTime;
+        uint256 interest = (loanAmount * 7 * loanPeriod) / (100 days * 100);
+        return interest;
     }
 }

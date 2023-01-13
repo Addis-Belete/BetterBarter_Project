@@ -15,7 +15,7 @@ interface IPriceProtection {
         external
         returns (bool, uint256, uint256);
 
-    function repayDebt(address userAddress, uint256 collateralId) external;
+    function unLockCollateral(address userAddress, uint256 collateralId) external returns (uint256);
     function getCollateralInfo(address userAddress, uint256 collateralId)
         external
         view
