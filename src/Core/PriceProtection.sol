@@ -21,20 +21,27 @@ contract PriceProtection is Oracle {
     address internal betterAddress;
     address internal underlying;
     IReceiptToken internal receiptToken;
+    address internal admin;
 
-    modifier onlyBetterAddress(address _addr) {
-        require(msg.sender == _addr, "Only called by Better address");
+    modifier onlyBetterAddress() {
+        require(msg.sender == betterAddress, "Only called by Better address");
+        _;
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only called by admin");
         _;
     }
 
     constructor(address _betterAddress, address _receiptTokenaddress) {
         betterAddress = _betterAddress;
         receiptToken = IReceiptToken(_receiptTokenaddress);
+        admin = msg.sender;
     }
 
     function lockCollateral(address userAddress, uint256 amount, uint256 stakingPeriod, uint256 callOptionId)
         external
-        onlyBetterAddress(msg.sender)
+        onlyBetterAddress
         returns (bool, uint256, uint256)
     {
         uint256 collateralId = userCollateralIds[userAddress]++;
@@ -50,11 +57,16 @@ contract PriceProtection is Oracle {
         return (true, uint256(assetPriceInUSD), collateralId);
     }
 
-    function getCollateralInfo(address userAddress, uint256 collateralId)
-        external
-        view
-        returns (CollateralInfo memory)
-    {
+    function repayDebt(address userAddress, uint256 collateralId) external onlyBetterAddress {
+        CollateralInfo storage _collateral = collateral[userAddress][collateralId];
+        delete _collateral.amount;
+        delete _collateral.callOptionId;
+        delete _collateral.isLocked;
+    }
+
+    function setBetterBarterAddress(address _betterBarterAddress) external onlyAdmin {}
+
+    function getCollateralInfo(address userAddress, uint256 collateralId) public view returns (CollateralInfo memory) {
         return collateral[userAddress][collateralId];
     }
 }
