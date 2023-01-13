@@ -37,7 +37,7 @@ contract BetterBarter is Exchange, Oracle {
     address internal usdcOracleAddress;
 
     event NewAssetDepositedForCallOption(
-        address indexed owner, uint256 indexed amount, uint256 strikePrice, uint256 deadline
+        address indexed owner, uint256 indexed _callOptionId, uint256 amount, uint256 strikePrice, uint256 deadline
     );
 
     event CallOptionSold(uint256 indexed callOptionId, address buyer);
@@ -101,10 +101,10 @@ contract BetterBarter is Exchange, Oracle {
 
         callOptions[callOptionId] = _callOption;
 
-        emit NewAssetDepositedForCallOption(msg.sender, swappedEthAmount, strikePrice, _deadline);
+        emit NewAssetDepositedForCallOption(msg.sender, callOptionId, swappedEthAmount, strikePrice, _deadline);
     }
 
-    function withdrawEth() external {}
+    function withdrawEth(uint256 _call) external {}
 
     function buyCallOption(uint256 _callOptionId) external {
         CallOption storage _callOption = callOptions[_callOptionId];

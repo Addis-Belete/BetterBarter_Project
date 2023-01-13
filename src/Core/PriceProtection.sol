@@ -16,7 +16,7 @@ contract PriceProtection is Oracle {
         uint256 callOptionId;
     }
 
-    mapping(address => mapping(uint256 => CollateralInfo)) public collateral; // address => collateralId => CollateralInfo
+    mapping(address => mapping(uint256 => CollateralInfo)) internal collateral; // address => collateralId => CollateralInfo
     mapping(address => uint256) internal userCollateralIds;
     address internal betterAddress;
     address internal underlying;
@@ -48,6 +48,14 @@ contract PriceProtection is Oracle {
 
         receiptToken.mint(userAddress, amount);
         return (true, uint256(assetPriceInUSD), collateralId);
+    }
+
+    function getCollateralInfo(address userAddress, uint256 collateralId)
+        external
+        view
+        returns (CollateralInfo memory)
+    {
+        return collateral[userAddress][collateralId];
     }
 }
 
