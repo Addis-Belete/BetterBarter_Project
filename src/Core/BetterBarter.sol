@@ -29,9 +29,7 @@ contract BetterBarter is Exchange, Oracle {
 
     ICruise internal cruise;
     address internal priceProtectionAddress;
-    address internal wETH;
     address internal crETH;
-    address internal underlying;
     address internal LPWalletAddress;
     uint256 private callOptionId;
     address internal ethOracleAddress;
@@ -78,7 +76,7 @@ contract BetterBarter is Exchange, Oracle {
 
         uint256 loanAmount = ILPWallet(LPWalletAddress).transferLoan(assetPrice);
 
-        uint256 swappedEthAmount = swap(address(this), underlying, wETH, loanAmount, block.timestamp + 5 minutes);
+        uint256 swappedEthAmount = swap(0, address(this), underlying, wETH, loanAmount, block.timestamp + 5 minutes);
 
         int256 priceOfSwappedEth = getPriceInUSD(ethOracleAddress);
 
@@ -113,7 +111,12 @@ contract BetterBarter is Exchange, Oracle {
         IPriceProtection.CollateralInfo memory _collateral =
             IPriceProtection(priceProtectionAddress).getCollateralInfo(userAddress, _callOption.collateralId);
         uint256 interest = calculateInterest(_collateral.initailTime, _callOption.loanAmount);
-
+        /**
+         *
+         * 			When CallOption sold and strike Price fully paid
+         *
+         *
+         */
         if (_callOption.isSold && _callOption.isFullyPayed) {
             uint256 totalUnderlyingCollacted = _callOption.premiumPrice + _callOption.strikePrice;
             require(_callOption.loanAmount < totalUnderlyingCollacted, "Error");
@@ -129,20 +132,60 @@ contract BetterBarter is Exchange, Oracle {
             cruise.withdraw(releasedAmount, wETH);
             uint256 amountWithdrawed = address(this).balance - balanceBeforeWithdraw;
             uint256 profit = totalUnderlyingCollacted - _callOption.loanAmount + interest;
-            uint256 profitInEth = swap(address(this), underlying, wETH, profit, block.timestamp + 5 minutes);
+            uint256 profitInEth = swap(0, address(this), underlying, wETH, profit, block.timestamp + 5 minutes);
 
             (bool success,) = (msg.sender.call{value: profitInEth + amountWithdrawed}(""));
 
             require(success, "Transfer failed");
+            /**
+             *
+             * 			When CallOption sold but, strike Price not paid
+             *
+             *
+             */
         } else if (_callOption.isSold && !_callOption.isFullyPayed) {
-            // convert Eth to USDC;
-            // payLoan
-            // swap the remaining to ETH
+            uint256 _loanAmount = _callOption.loanAmount;
+            uint256 debt = _loanAmount + interest - _callOption.premiumPrice;
+
+            uint256 amountIn = swap(1, address(this), wETH, underlying, debt, block.timestamp + 5 minutes);
+
+            require(
+                IERC20(underlying).transferFrom(address(this), LPWalletAddress, _callOption.premiumPrice + debt),
+                "Transfer failed"
+            );
+
+            uint256 releasedAmount =
+                IPriceProtection(priceProtectionAddress).unLockCollateral(userAddress, _callOption.collateralId);
+            uint256 balanceBeforeWithdraw = address(this).balance;
+            cruise.withdraw(releasedAmount, wETH);
+            uint256 amountWithdrawed = address(this).balance - balanceBeforeWithdraw;
+            uint256 amountToTransfer = amountWithdrawed + _callOption.loanAmount - amountIn;
+            (bool success,) = msg.sender.call{value: amountToTransfer}("");
+            require(success, "Transfer failed");
+            /**
+             *
+             * 			When CallOption Not sold
+             *
+             *
+             */
         } else if (!_callOption.isSold && !_callOption.isFullyPayed) {
-            // Convert ETH to USDT
-            // Withdraw ETH From Cruise and convert it USDT
-            // payLoan
-            // Transfer the remaining to user
+            uint256 _loanAmount = _callOption.loanAmount;
+            uint256 totalDebt = _loanAmount + interest;
+            uint256 amountOut =
+                swap(0, address(this), wETH, underlying, _callOption.amount, block.timestamp + 5 minutes);
+
+            uint256 balanceBeforeWithdraw = address(this).balance;
+            cruise.withdraw(_collateral.amount, wETH);
+            uint256 amountWithdrawed = address(this).balance - balanceBeforeWithdraw;
+            if (totalDebt > amountOut) {
+                uint256 amountLeft = totalDebt - amountOut;
+                uint256 amountIn = swap(1, address(this), wETH, underlying, amountLeft, block.timestamp + 5 minutes);
+                (bool success,) = address(this).call{value: amountWithdrawed - amountIn}("");
+                require(success, "Transfer failed");
+            } else {
+                (bool success,) = address(this).call{value: amountWithdrawed}("");
+                require(success, "Transfer failed");
+            }
         }
     }
 
@@ -199,7 +242,6 @@ contract BetterBarter is Exchange, Oracle {
     }
 
     function calculateInterest(uint256 initialStakingTime, uint256 loanAmount) internal view returns (uint256) {
-        //100days 7%
         uint256 loanPeriod = block.timestamp - initialStakingTime;
         uint256 interest = (loanAmount * 7 * loanPeriod) / (100 days * 100);
         return interest;

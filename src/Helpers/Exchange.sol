@@ -13,36 +13,68 @@ contract Exchange {
         qouter = IQuoter(_qouterAddress);
     }
 
-    uint24 public constant _poolFee = 3000;
+    uint24 internal _poolFee = 3000;
+    address internal wETH;
+    address internal underlying;
 
-    function swap(address _recipient, address _tokenIn, address _tokenOut, uint256 _amountIn, uint256 _deadline)
-        internal
-        returns (uint256)
-    {
-        //TransferHelper.safeApprove(tokenIn, address(router), _amountIn);
-        IERC20(_tokenIn).approve(address(router), _amountIn);
-        uint256 amountOutMin = getAmountAmountOutMinimum(_tokenIn, _tokenOut, _amountIn);
+    function swap(
+        uint8 _type,
+        address _recipient,
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amount,
+        uint256 _deadline
+    ) public payable returns (uint256) {
+        require(_type == 0 || _type == 1, "only 1 or 0");
+        uint256 amount;
+        if (_type == 0) {
+            IERC20(_tokenIn).approve(address(router), _amount);
+            uint256 amountOutMin = getAmountOutMinimum(_tokenIn, _tokenOut, _amount);
 
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-            tokenIn: _tokenIn,
-            tokenOut: _tokenOut,
-            fee: _poolFee,
-            recipient: _recipient,
-            deadline: _deadline,
-            amountIn: _amountIn,
-            amountOutMinimum: amountOutMin,
-            sqrtPriceLimitX96: 0
-        });
+            ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+                tokenIn: _tokenIn,
+                tokenOut: _tokenOut,
+                fee: _poolFee,
+                recipient: _recipient,
+                deadline: _deadline,
+                amountIn: _amount,
+                amountOutMinimum: amountOutMin,
+                sqrtPriceLimitX96: 0
+            });
+            if (_tokenIn == underlying) {
+                IERC20(_tokenIn).approve(address(router), _amount);
+                amount = router.exactInputSingle(params);
+            } else {
+                amount = router.exactInputSingle{value: _amount}(params);
+            }
+        } else {
+            uint256 amountInMin = getAmountInMinimum(_tokenIn, _tokenOut, _amount);
+            IERC20(_tokenIn).approve(address(router), _amount);
+            ISwapRouter.ExactOutputSingleParams memory _params = ISwapRouter.ExactOutputSingleParams({
+                tokenIn: _tokenIn,
+                tokenOut: _tokenOut,
+                fee: _poolFee,
+                recipient: _recipient,
+                deadline: _deadline,
+                amountOut: _amount,
+                amountInMaximum: amountInMin,
+                sqrtPriceLimitX96: 0
+            });
 
-        uint256 amountOut = router.exactInputSingle(params);
-        return amountOut;
+            (bool success,) = address(router).call{value: _amount}(
+                abi.encodeWithSignature("exactOutputSingle(ExactOutputSingleParams)", _params)
+            );
+            require(success, "Failed");
+            amount = amountInMin;
+        }
+        return amount;
     }
 
-    function getAmountAmountOutMinimum(address _tokenIn, address _tokenOut, uint256 _amountIn)
-        private
-        returns (uint256)
-    {
-        uint256 amountOut = qouter.quoteExactInputSingle(_tokenIn, _tokenOut, _poolFee, _amountIn, 0);
-        return amountOut;
+    function getAmountOutMinimum(address _tokenIn, address _tokenOut, uint256 _amountIn) private returns (uint256) {
+        return qouter.quoteExactInputSingle(_tokenIn, _tokenOut, _poolFee, _amountIn, 0);
+    }
+
+    function getAmountInMinimum(address _tokenIn, address _tokenOut, uint256 _amountOut) private returns (uint256) {
+        return qouter.quoteExactOutputSingle(_tokenIn, _tokenOut, _poolFee, _amountOut, 0);
     }
 }
