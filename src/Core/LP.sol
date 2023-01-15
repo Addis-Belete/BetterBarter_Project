@@ -2,15 +2,17 @@
 pragma solidity ^0.8.13;
 
 import "../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "../../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 import "../Interfaces/IReceiptToken.sol";
 import "forge-std/console2.sol";
+
 /**
  * @notice LP get 7% Interest in 100days
  * user provide liquidity to Better Barter by using this contract.
  * The Asset stored in LP wallet (fixed later)
  */
 
-contract LP {
+contract LP is ReentrancyGuard {
     /**
      * @notice Struct that holds liquidity provider info
      */
@@ -80,7 +82,11 @@ contract LP {
      * @param amount The number of asset to be withdrawn
      * @param _stakingId The Position at which user will withdraw funds.
      */
-    function withdraw(address userAddress, uint256 amount, uint256 _stakingId) external checkAddress(userAddress) {
+    function withdraw(address userAddress, uint256 amount, uint256 _stakingId)
+        external
+        checkAddress(userAddress)
+        nonReentrant
+    {
         UserInfo storage _userInfo = userInfo[userAddress][_stakingId];
         require(_stakingId > 0 && _userInfo.initialTime > 0, "Not staked");
         require(_userInfo.stakingEndTime <= block.timestamp, "Not matured");
