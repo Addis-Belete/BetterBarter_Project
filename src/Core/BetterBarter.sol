@@ -8,6 +8,20 @@ import "../interfaces/IPriceProtection.sol";
 import "../Helpers/Exchange.sol";
 import "../Helpers/Oracle.sol";
 
+/**
+ *
+ * Neccessary Addresses on Georli
+ * WETH = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
+ * USDC = 0xde637d4c445ca2aae8f782ffac8d2971b93a4998;
+ *
+ * Router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+ * Qouter = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
+ *
+ *
+ *
+ *
+ *
+ */
 contract BetterBarter is Exchange, Oracle {
     //Responsible for the main logic of the Better Barter APP.
 
@@ -177,15 +191,20 @@ contract BetterBarter is Exchange, Oracle {
             uint256 balanceBeforeWithdraw = address(this).balance;
             cruise.withdraw(_collateral.amount, wETH);
             uint256 amountWithdrawed = address(this).balance - balanceBeforeWithdraw;
+
             if (totalDebt > amountOut) {
                 uint256 amountLeft = totalDebt - amountOut;
                 uint256 amountIn = swap(1, address(this), wETH, underlying, amountLeft, block.timestamp + 5 minutes);
-                (bool success,) = address(this).call{value: amountWithdrawed - amountIn}("");
-                require(success, "Transfer failed");
-            } else {
-                (bool success,) = address(this).call{value: amountWithdrawed}("");
-                require(success, "Transfer failed");
+                amountWithdrawed -= amountIn;
             }
+            require(
+                IERC20(underlying).transferFrom(address(this), LPWalletAddress, _callOption.premiumPrice + totalDebt),
+                "Transfer failed"
+            );
+
+            IPriceProtection(priceProtectionAddress).unLockCollateral(userAddress, _callOption.collateralId);
+            (bool success,) = address(this).call{value: amountWithdrawed}("");
+            require(success, "Transfer failed");
         }
     }
 
