@@ -40,11 +40,9 @@ contract ReceiptToken is ERC20 {
      * @notice a constructor used to initailize the necessary variables in the contract
      * @param _tokenName The name of the token
      * @param _symbol  The symbol of the token
-     * @param _adminAddress The address of the admin
      */
-    constructor(string memory _tokenName, string memory _symbol, address _adminAddress) ERC20(_tokenName, _symbol) {
-        require(_adminAddress != address(0), "Invalid address");
-        admin = _adminAddress;
+    constructor(string memory _tokenName, string memory _symbol) ERC20(_tokenName, _symbol) {
+        admin = msg.sender;
         _name = _tokenName;
     }
 
