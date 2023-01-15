@@ -10,12 +10,7 @@ contract LPWallet is Oracle {
     address internal priceProtectionAddress;
     IERC20 internal underlying;
 
-    modifier onlyPriceProtection(address _addr) {
-        require(msg.sender == priceProtectionAddress, "Only called by price protection");
-        _;
-    }
-
-    modifier onlyBetterAddress(address _addr) {
+    modifier onlyBetterAddress() {
         require(msg.sender == betterAddress, "Only called By Better");
         _;
     }
@@ -29,7 +24,7 @@ contract LPWallet is Oracle {
     /**
      * @notice Used to transfer underlying to the better barter contract on behalf of user
      */
-    function transferLoan(uint256 ethPrice) external onlyBetterAddress(msg.sender) returns (uint256) {
+    function transferLoan(uint256 ethPrice) external onlyBetterAddress returns (uint256) {
         int256 underlyingPrice = getPriceInUSD(address(underlying));
         uint256 loanAmount = (ethPrice * 75) / 100;
         int256 assetAmount = int256(loanAmount) / (underlyingPrice);

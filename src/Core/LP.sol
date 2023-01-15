@@ -92,11 +92,13 @@ contract LP is ReentrancyGuard {
         require(_userInfo.stakingEndTime <= block.timestamp, "Not matured");
         require(_userInfo.amount >= amount, "Not enough amount on this position");
         uint256 _interest = calculateInterest(amount, _userInfo.initialTime);
+        console2.log(_interest, "Calculated interest");
         require(underlying.balanceOf(address(this)) >= (amount + _interest), "No enough liquidity");
         _userInfo.amount -= amount;
         receiptToken.burn(userAddress, amount);
+
         require(underlying.transfer(userAddress, (amount + _interest)), "Transfer failed");
-        emit AssetWithdrawed(userAddress, amount, _stakingId);
+        emit AssetWithdrawed(userAddress, (amount + _interest), _stakingId);
     }
 
     /**
@@ -115,6 +117,6 @@ contract LP is ReentrancyGuard {
 
     function calculateInterest(uint256 amount, uint256 _initialStakingTime) internal view returns (uint256) {
         uint256 totalTime = block.timestamp - _initialStakingTime;
-        return ((amount * 7 * totalTime * 10 ** 18) / (100 * 100));
+        return ((amount * 7 * totalTime) / (100 days * 100));
     }
 }
