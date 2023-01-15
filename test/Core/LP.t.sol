@@ -27,7 +27,7 @@ contract LPTest is Test {
         underlying.mint(address(30), 5000 ether);
 
         underlyingAddress = address(underlying);
-        lp = new LP(address(receipt), address(underlying));
+        lp = new LP(address(receipt), address(underlying), address(20));
         underlying.mint(address(lp), 100 ether);
 
         receipt.setPoolAddress(address(lp));
@@ -70,10 +70,10 @@ contract LPTest is Test {
         vm.startPrank(address(30));
         IERC20(underlyingAddress).approve(address(lp), 2 ether);
         lp.deposit(address(30), 2 ether, 7 days);
-        // vm.expectEmit(true, false, false, false);
+        vm.expectEmit(true, false, false, false);
         vm.warp(8 days);
         lp.withdraw(address(30), 2 ether, 1);
-        // emit AssetWithdrawed(address(30), 2011199983796296296, 1);
+        emit AssetWithdrawed(address(30), 2011199983796296296, 1);
         assertEq(IERC20(receiptAddress).balanceOf(address(30)), 0);
         LP.UserInfo memory _userInfo = lp.getUserInfo(address(30), 1);
         assertEq(_userInfo.amount, 0);
