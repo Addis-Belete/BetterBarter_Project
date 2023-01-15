@@ -5,14 +5,14 @@ import "../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "../../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 import "../Interfaces/IReceiptToken.sol";
 import "forge-std/console2.sol";
-
+import "../Helpers/Oracle.sol";
 /**
  * @notice LP get 7% Interest in 100days
  * user provide liquidity to Better Barter by using this contract.
  * The Asset stored in LP wallet (fixed later)
  */
 
-contract LP is ReentrancyGuard {
+contract LP is ReentrancyGuard, Oracle {
     /**
      * @notice Struct that holds liquidity provider info
      */
@@ -28,10 +28,13 @@ contract LP is ReentrancyGuard {
 
     IReceiptToken internal receiptToken;
     IERC20 internal underlying;
+    address internal betterAddress;
+    address internal admin;
 
     /**
      * @notice Emitted when asset deposited to the pool
      */
+
     event Deposited(address indexed userAddress, uint256 amount, uint256 stakingPeriod);
 
     /**
@@ -39,14 +42,31 @@ contract LP is ReentrancyGuard {
      */
     event AssetWithdrawed(address indexed userAddress, uint256 amount, uint256 stakingId);
 
+    /**
+     * @notice Emitted when loan successfully transferred to Barter Better contract
+     */
+    event LoanTransferred(uint256 amount);
+
     modifier checkAddress(address _addr) {
         require(_addr != address(0), "InvalidAddress");
         _;
     }
 
-    constructor(address _receiptTokenAddress, address _underlyingAddress) {
+    modifier onlyBetterAddress() {
+        require(msg.sender == betterAddress, "Only called By Better");
+        _;
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only called by admin");
+        _;
+    }
+
+    constructor(address _receiptTokenAddress, address _underlyingAddress, address _betterAddress) {
         receiptToken = IReceiptToken(_receiptTokenAddress);
         underlying = IERC20(_underlyingAddress);
+        betterAddress = _betterAddress;
+        admin = msg.sender;
     }
 
     /**
@@ -102,10 +122,30 @@ contract LP is ReentrancyGuard {
     }
 
     /**
+     * @notice Used to transfer underlying to the better barter contract on behalf of user
+     */
+    function transferLoan(uint256 ethPrice) external onlyBetterAddress returns (uint256) {
+        int256 underlyingPrice = getPriceInUSD(address(underlying));
+        uint256 loanAmount = (ethPrice * 75) / 100;
+        int256 assetAmount = int256(loanAmount) / (underlyingPrice);
+        require(underlying.transfer(betterAddress, uint256(assetAmount)), "Transfer failed");
+        emit LoanTransferred(uint256(assetAmount));
+        return uint256(assetAmount);
+    }
+
+    /**
+     * @notice Used to change BarterBetter contract address
+     * @param _addr The address of BarterBetter contract to be changed
+     */
+    function setBetterAddress(address _addr) external checkAddress(_addr) onlyAdmin {
+        betterAddress = _addr;
+    }
+    /**
      * @notice Used to get the userInfo
      * @param _userAddress The Address of the user
      * @param _stakingId The Id where the asset deposited
      */
+
     function getUserInfo(address _userAddress, uint256 _stakingId) external view returns (UserInfo memory) {
         return userInfo[_userAddress][_stakingId];
     }
