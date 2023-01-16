@@ -21,3 +21,5 @@ contract OracleTest is Test {
         console2.log(uint256(price) / 10 ** 8, "USDC price In USD");
     }
 }
+
+//forge test --match testGetPriceInUSD --fork-url https://rpc.ankr.com/eth -vvvv

@@ -126,9 +126,11 @@ contract LP is ReentrancyGuard, Oracle {
      */
     function transferLoan(uint256 ethPrice) external onlyBetterAddress returns (uint256) {
         uint256 loanAmount = (ethPrice * 75) / 100;
-        require(underlying.transfer(betterAddress, uint256(loanAmount)), "Transfer failed");
+        int256 underlyingPrice = getPriceInUSD(address(underlying));
+        uint256 loanInToken = (loanAmount * 10 ** 8) / uint256(underlyingPrice);
+        require(underlying.transfer(betterAddress, uint256(loanInToken)), "Transfer failed");
         emit LoanTransferred(uint256(loanAmount));
-        return uint256(loanAmount);
+        return uint256(loanInToken);
     }
 
     /**
