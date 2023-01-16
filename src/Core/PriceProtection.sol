@@ -5,21 +5,25 @@ import "../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "../Helpers/Oracle.sol";
 import "../Interfaces/IReceiptToken.sol";
 // This contract is responsible for price protection.
+// TOKen/USD decimal is 8
+import "forge-std/console2.sol";
 
 contract PriceProtection is Oracle {
     struct CollateralInfo {
         int256 priceInUSD;
         uint256 stakingPeriod;
-        uint256 amount;
+        uint256 collateralPrice; // The amount of collateral in USD
+        uint256 collateralAmount;
         uint256 initailTime;
         bool isLocked;
-        uint256 callOptionId;
+        uint256 callOptionId; // The Id of the callOption created by using this collateral
     }
 
     mapping(address => mapping(uint256 => CollateralInfo)) internal collateral; // address => collateralId => CollateralInfo
     mapping(address => uint256) internal userCollateralIds;
     address internal betterAddress;
     address internal underlying;
+    address internal wETH;
     IReceiptToken internal receiptToken;
     address internal admin;
     address internal crETH;
@@ -78,16 +82,18 @@ contract PriceProtection is Oracle {
     {
         uint256 collateralId = userCollateralIds[userAddress] += 1;
 
-        int256 assetPriceInUSD = (getPriceInUSD(underlying)) * int256(amount);
-
-        CollateralInfo memory _collateralInfo =
-            CollateralInfo(assetPriceInUSD, stakingPeriod, amount, block.timestamp, true, callOptionId);
+        int256 assetPriceInUSD = ((getPriceInUSD(wETH)) * int256(amount)) / (10 ** 8 * 10 ** 18);
+        console2.log(uint256(assetPriceInUSD), "AssetPrice");
+        uint256 _collateralPrice = (uint256(assetPriceInUSD) * 85) / 100; // Wee got 85% of asset from cruise finance
+        CollateralInfo memory _collateralInfo = CollateralInfo(
+            assetPriceInUSD, stakingPeriod, _collateralPrice, amount, block.timestamp, true, callOptionId
+        );
 
         collateral[userAddress][collateralId] = _collateralInfo;
 
         receiptToken.mint(userAddress, amount);
         emit CollateralLocked(userAddress, amount);
-        return (true, uint256(assetPriceInUSD), collateralId);
+        return (true, _collateralPrice, collateralId);
     }
 
     /**
@@ -98,13 +104,13 @@ contract PriceProtection is Oracle {
     function unLockCollateral(address userAddress, uint256 collateralId) external onlyBetterAddress returns (uint256) {
         CollateralInfo storage _collateral = collateral[userAddress][collateralId];
         require(_collateral.isLocked, "Collateral not available");
-        require(receiptToken.balanceOf(userAddress) >= _collateral.amount, "Not enough fund");
-        receiptToken.burn(userAddress, _collateral.amount);
+        require(receiptToken.balanceOf(userAddress) >= _collateral.collateralAmount, "Not enough fund");
+        receiptToken.burn(userAddress, _collateral.collateralAmount);
         _collateral.isLocked = false;
 
-        require(IERC20(crETH).transferFrom(address(this), betterAddress, _collateral.amount), "Transfer failed");
-        emit CollateralUnLocked(userAddress, _collateral.amount);
-        return _collateral.amount;
+        require(IERC20(crETH).transfer(betterAddress, _collateral.collateralAmount), "Transfer failed");
+        emit CollateralUnLocked(userAddress, _collateral.collateralAmount);
+        return _collateral.collateralAmount;
     }
 
     /**

@@ -5,10 +5,11 @@ interface IPriceProtection {
     struct CollateralInfo {
         int256 priceInUSD;
         uint256 stakingPeriod;
-        uint256 amount;
+        uint256 collateralPrice; // The amount of collateral in USD
+        uint256 collateralAmount;
         uint256 initailTime;
         bool isLocked;
-        uint256 callOptionId;
+        uint256 callOptionId; // The Id of the callOption created by using this collateral
     }
 
     function lockCollateral(address userAddress, uint256 amount, uint256 stakingPeriod, uint256 callOptionId)
@@ -22,6 +23,6 @@ interface IPriceProtection {
         returns (CollateralInfo memory);
 }
 
-interface ILPWallet {
+interface ILP {
     function transferLoan(uint256 ethPrice) external returns (uint256);
 }

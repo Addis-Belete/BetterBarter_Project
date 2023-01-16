@@ -125,12 +125,10 @@ contract LP is ReentrancyGuard, Oracle {
      * @notice Used to transfer underlying to the better barter contract on behalf of user
      */
     function transferLoan(uint256 ethPrice) external onlyBetterAddress returns (uint256) {
-        int256 underlyingPrice = getPriceInUSD(address(underlying));
         uint256 loanAmount = (ethPrice * 75) / 100;
-        int256 assetAmount = int256(loanAmount) / (underlyingPrice);
-        require(underlying.transfer(betterAddress, uint256(assetAmount)), "Transfer failed");
-        emit LoanTransferred(uint256(assetAmount));
-        return uint256(assetAmount);
+        require(underlying.transfer(betterAddress, uint256(loanAmount)), "Transfer failed");
+        emit LoanTransferred(uint256(loanAmount));
+        return uint256(loanAmount);
     }
 
     /**
