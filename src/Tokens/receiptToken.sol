@@ -54,11 +54,15 @@ contract ReceiptToken is ERC20 {
         return _name;
     }
 
+    function decimals() public view virtual override returns (uint8) {
+        return 6;
+    }
     /**
      * @notice Changes the name of the token
      * @dev only called by the admin
      * @param _tokenName The new name of the token
      */
+
     function changeName(string memory _tokenName) external onlyAdmin {
         _name = _tokenName;
         emit NameChanged(_tokenName, msg.sender);

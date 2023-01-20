@@ -101,4 +101,12 @@ contract LPTest is Test {
         vm.warp(8 days);
         lp.withdraw(address(30), 3 ether, 1);
     }
+
+    function testTransferLoan() public {
+        vm.startPrank(address(20));
+        lp.transferLoan(1500);
+        uint256 loanTransferred = IERC20(underlyingAddress).balanceOf(address(20));
+        console.log(loanTransferred, "Loan Transferred");
+        vm.stopPrank();
+    }
 }

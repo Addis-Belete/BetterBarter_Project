@@ -48,6 +48,7 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
     uint256 private callOptionId;
     address internal ethOracleAddress;
     address internal usdcOracleAddress;
+    address internal owner;
 
     event NewAssetDepositedForCallOption(
         address indexed owner, uint256 indexed _callOptionId, uint256 amount, uint256 strikePrice, uint256 deadline
@@ -57,18 +58,26 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
 
     event StrikePricePayed(uint256 indexed _callOptionId);
 
-    constructor(
-        address _cruiseAddress,
-        address _priceProtectionAddress,
-        address _weth,
-        address _LPAddress,
-        address _routerAddress,
-        address _qouterAddress
-    ) Exchange(_routerAddress, _qouterAddress) {
+    event PriceProtectionAddressSetted(address _addr);
+
+    event LPAddressSetted(address _addr);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "only called by owner");
+        _;
+    }
+
+    constructor(address _cruiseAddress, address _weth, address _routerAddress, address _qouterAddress)
+        Exchange(_routerAddress, _qouterAddress)
+    {
+        require(
+            _cruiseAddress != address(0) || _weth != address(0) || _routerAddress != address(0)
+                || _qouterAddress != address(0),
+            "Invalid address"
+        );
         cruise = ICruise(_cruiseAddress);
-        priceProtectionAddress = _priceProtectionAddress;
         wETH = _weth;
-        LPAddress = _LPAddress;
+        owner = msg.sender;
     }
 
     /**
@@ -274,6 +283,28 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
         require(success, "Transfer failed");
 
         emit StrikePricePayed(_callOptionId);
+    }
+
+    /**
+     * @notice Used to set the address of price protection
+     * @param _addr The address of price protection contract
+     * @dev only called by the owner
+     */
+    function setPriceProtectionAddress(address _addr) external onlyOwner {
+        require(_addr != address(0), "Invalid address");
+        priceProtectionAddress = _addr;
+        emit PriceProtectionAddressSetted(_addr);
+    }
+
+    /**
+     * @notice Used to set the address of LP contract
+     * @param _addr The address of LP contract
+     * @dev only called by the owner
+     */
+    function setLPAddress(address _addr) external onlyOwner {
+        require(_addr != address(0), "Invalid address");
+        LPAddress = _addr;
+        emit LPAddressSetted(_addr);
     }
 
     /**

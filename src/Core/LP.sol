@@ -10,6 +10,7 @@ import "../Helpers/Oracle.sol";
  * @notice LP get 7% Interest in 100days
  * user provide liquidity to Better Barter by using this contract.
  * The Asset stored in LP wallet (fixed later)
+ * @dev for test case days changed to minutes
  */
 
 contract LP is ReentrancyGuard, Oracle {
@@ -77,8 +78,8 @@ contract LP is ReentrancyGuard, Oracle {
      */
     function deposit(address userAddress, uint256 _amount, uint256 _stakingPeriod) external checkAddress(userAddress) {
         require(
-            _stakingPeriod == 7 days || _stakingPeriod == 15 days || _stakingPeriod == 30 days
-                || _stakingPeriod == 100 days,
+            _stakingPeriod == 7 minutes || _stakingPeriod == 15 minutes || _stakingPeriod == 30 minutes
+                || _stakingPeriod == 100 minutes,
             "Periods 7, 15, 30,100 days"
         );
         require(underlying.transferFrom(userAddress, address(this), _amount), "Transfer failed");
@@ -127,7 +128,8 @@ contract LP is ReentrancyGuard, Oracle {
     function transferLoan(uint256 ethPrice) external onlyBetterAddress returns (uint256) {
         uint256 loanAmount = (ethPrice * 75) / 100;
         int256 underlyingPrice = getPriceInUSD(address(underlying));
-        uint256 loanInToken = (loanAmount * 10 ** 8) / uint256(underlyingPrice);
+        uint256 loanInToken = (loanAmount * 10 ** 14) / uint256(underlyingPrice); // 10**14 -> 10**6 USDC Decimal 10**8 -> price decimal from chainlink
+        console2.log(loanInToken, "Loan In token");
         require(underlying.transfer(betterAddress, uint256(loanInToken)), "Transfer failed");
         emit LoanTransferred(uint256(loanAmount));
         return uint256(loanInToken);
@@ -157,6 +159,6 @@ contract LP is ReentrancyGuard, Oracle {
 
     function calculateInterest(uint256 amount, uint256 _initialStakingTime) internal view returns (uint256) {
         uint256 totalTime = block.timestamp - _initialStakingTime;
-        return ((amount * 7 * totalTime) / (100 days * 100));
+        return ((amount * 7 * totalTime) / (100 minutes * 100));
     }
 }
