@@ -12,17 +12,13 @@ import "../Helpers/Oracle.sol";
 /**
  *
  * Neccessary Addresses on Georli
- * WETH = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
- * USDC = 0xde637d4c445ca2aae8f782ffac8d2971b93a4998;
  *
- * Router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
- * Qouter = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
  * crETH = 0x0716e8f8F5D85a112aeA660b9D4a4fa17a159f1f --> georli
- * USDCOnGeorli = 0x9FD21bE27A2B059a288229361E2fA632D8D2d074
- * WETH on Georli = 0xCCa7d1416518D095E729904aAeA087dBA749A4dC
+ * USDCOnGeorli = 0x07865c6E87B9F70255377e024ace6630C1Eaa37F
+ * WETH on Georli = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6
  * Cruise Contract = 0xe3aa7826348ee5559bcf70fe626a3ca6962ffbdc
- *
- *
+ * usdcOracleAddress = 0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7
+ * ethOracleAddress = 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e
  */
 contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
     struct CallOption {
@@ -67,17 +63,27 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
         _;
     }
 
-    constructor(address _cruiseAddress, address _weth, address _routerAddress, address _qouterAddress)
-        Exchange(_routerAddress, _qouterAddress)
-    {
+    constructor(
+        address _cruiseAddress,
+        address _weth,
+        address _routerAddress,
+        address _crEth,
+        address _ethOracleaddress,
+        address _usdcOracleAddress,
+        address _underlying
+    ) Exchange(_routerAddress) {
         require(
-            _cruiseAddress != address(0) || _weth != address(0) || _routerAddress != address(0)
-                || _qouterAddress != address(0),
+            _cruiseAddress != address(0) || _weth != address(0) || _routerAddress != address(0) || _crEth != address(0)
+                || _usdcOracleAddress != address(0) || _ethOracleaddress != address(0),
             "Invalid address"
         );
         cruise = ICruise(_cruiseAddress);
         wETH = _weth;
         owner = msg.sender;
+        crETH = _crEth;
+        usdcOracleAddress = _usdcOracleAddress;
+        ethOracleAddress = _ethOracleaddress;
+        underlying = _underlying;
     }
 
     /**
@@ -87,7 +93,8 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
     function depositETH(uint256 stakingPeriod) external payable {
         require(msg.value > 0, "Value not 0");
         require(
-            stakingPeriod == 7 days || stakingPeriod == 15 days || stakingPeriod == 30 days || stakingPeriod == 100 days,
+            stakingPeriod == 7 minutes || stakingPeriod == 15 minutes || stakingPeriod == 30 minutes
+                || stakingPeriod == 100 minutes,
             "Periods 7, 15, 30,100 days"
         );
         callOptionId++;

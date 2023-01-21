@@ -6,18 +6,16 @@ import "../Interfaces/IUniswap.sol";
 import "forge-std/console2.sol";
 
 contract Exchange {
-    IQuoter internal qouter;
     ISwapRouterV2 internal routerV2;
     address internal WETH;
 
-    constructor(address _routerAddress, address _qouterAddress) {
+    constructor(address _routerAddress) {
         routerV2 = ISwapRouterV2(_routerAddress);
-        qouter = IQuoter(_qouterAddress);
     }
 
     uint24 internal _poolFee = 3000;
-    address internal wETH = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619; // WETH Address on polygon network
-    address internal underlying = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174; //USDC address on polygon network
+    address internal wETH;
+    address internal underlying;
 
     /**
      * @notice Used to swap one tokens to anather tokens.
@@ -84,7 +82,7 @@ contract Exchange {
             address[] memory path = new address[](2);
             path[0] = _tokenIn;
             path[1] = _tokenOut;
-           // IERC20(_tokenIn).transferFrom(msg.sender, address(this), _amount);
+            // IERC20(_tokenIn).transferFrom(msg.sender, address(this), _amount);
             IERC20(_tokenIn).approve(address(routerV2), _amount);
             uint256[] memory val =
                 routerV2.swapExactTokensForETH(_amount, amountOutMin[0], path, _recipient, block.timestamp);

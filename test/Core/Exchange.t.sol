@@ -19,7 +19,7 @@ contract TestExchange is Test {
     Exchange public exchange;
 
     function setUp() public {
-        exchange = new Exchange(routerV2, qouter);
+        exchange = new Exchange(routerV2);
     }
 
     /**
