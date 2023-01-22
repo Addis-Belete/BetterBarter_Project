@@ -275,18 +275,12 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
         require(block.timestamp < _callOption.deadline, "Expired");
         require(_callOption.buyer == msg.sender, "Not buyer");
         require(!_callOption.isFullyPayed, "Arleady paid");
-
         uint256 strikePrice = _callOption.strikePrice;
-
         uint256 strikeInToken = convertPriceToToken(strikePrice, usdcOracleAddress);
-
         require(IERC20(underlying).transferFrom(msg.sender, address(this), strikeInToken), "Transfer failed");
-
         _callOption.isFullyPayed = true;
-
         (bool success,) = (msg.sender).call{value: _callOption.amount}("");
         require(success, "Transfer failed");
-
         emit StrikePricePayed(_callOptionId);
     }
 
@@ -312,10 +306,20 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
         emit LPAddressSetted(_addr);
     }
 
+    /**
+     * @notice Used to get the callOptions details of particular call option
+     * @param _callOptionId The Id of the call option
+     * @return the call returns the CallOption struct with value
+     */
     function getCallOption(uint256 _callOptionId) external view returns (CallOption memory) {
         return callOptions[_callOptionId];
     }
 
+    /**
+     * @notice Used to convert prices to token by fetching from oracle(chainlink)
+     * 	@param price The Number of price to conver
+     * 	@param tokenOracleAddress The address of the oraclee address of a particular token
+     */
     function convertPriceToToken(uint256 price, address tokenOracleAddress) public view returns (uint256) {
         int256 _underlyingPrice = getPriceInUSD(tokenOracleAddress);
         uint256 tokenAmount = price * 10 ** 8 / uint256(_underlyingPrice);
