@@ -8,7 +8,7 @@ import "../interfaces/IPriceProtection.sol";
 
 import "../Helpers/Exchange.sol";
 import "../Helpers/Oracle.sol";
-
+import "forge-std/console2.sol";
 /**
  *
  * Neccessary Addresses on Georli
@@ -20,6 +20,7 @@ import "../Helpers/Oracle.sol";
  * usdcOracleAddress = 0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7
  * ethOracleAddress = 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e
  */
+
 contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
     struct CallOption {
         bool isSold; // show if the premium is payed for this call option;
@@ -45,6 +46,7 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
     address internal ethOracleAddress;
     address internal usdcOracleAddress;
     address internal owner;
+    address internal wethAddressforUniswap;
 
     event NewAssetDepositedForCallOption(
         address indexed owner, uint256 indexed _callOptionId, uint256 amount, uint256 strikePrice, uint256 deadline
@@ -70,7 +72,8 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
         address _crEth,
         address _ethOracleaddress,
         address _usdcOracleAddress,
-        address _underlying
+        address _underlying,
+        address _wethAddressForUniswap
     ) Exchange(_routerAddress) {
         require(
             _cruiseAddress != address(0) || _weth != address(0) || _routerAddress != address(0) || _crEth != address(0)
@@ -84,14 +87,18 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
         usdcOracleAddress = _usdcOracleAddress;
         ethOracleAddress = _ethOracleaddress;
         underlying = _underlying;
+        wethAddressforUniswap = _wethAddressForUniswap;
     }
 
+    receive() external payable {}
     /**
      * @notice Used to deposit ETH to the contract
      * @param stakingPeriod The period at which the ETH staked in the contract
+     * @dev used to different weth addresses for cruise and uniswap for test purpose
      */
-    function depositETH(uint256 stakingPeriod) external payable {
-        require(msg.value > 0, "Value not 0");
+
+    function depositETH(uint256 stakingPeriod, uint256 amount) external payable {
+        // require(msg.value > 0, "Value not 0");
         require(
             stakingPeriod == 7 minutes || stakingPeriod == 15 minutes || stakingPeriod == 30 minutes
                 || stakingPeriod == 100 minutes,
@@ -99,23 +106,18 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
         );
         callOptionId++;
 
-        cruise.deposit{value: msg.value}(msg.value, wETH);
-
+        IERC20(wETH).approve(address(cruise), amount);
+        cruise.deposit(amount, wETH);
         uint256 crETHAmount = IERC20(crETH).balanceOf(address(this));
         require(IERC20(crETH).transfer(priceProtectionAddress, crETHAmount), "Transfer failed");
         (bool success, uint256 collateralPrice, uint256 _collateralId) = IPriceProtection(priceProtectionAddress)
             .lockCollateral(msg.sender, crETHAmount, stakingPeriod, callOptionId);
-
         require(success, "Price Protection failed");
-
         uint256 loanAmount = ILP(LPAddress).transferLoan(collateralPrice);
-
-        uint256 swappedEthAmount = swapETH(1, address(this), underlying, wETH, loanAmount);
-
+        uint256 swappedEthAmount = swapETH(1, address(this), underlying, wethAddressforUniswap, loanAmount);
         int256 priceOfEth = getPriceInUSD(ethOracleAddress);
-        int256 priceOfSwappedEth = (priceOfEth * int256(swappedEthAmount)) / (10 ** 8 * 10 ** 18);
+        uint256 priceOfSwappedEth = (uint256(priceOfEth) * (swappedEthAmount)) / (10 ** 8 * 10 ** 18);
         uint256 strikePrice = calculateStrikePrice(priceOfSwappedEth, stakingPeriod);
-
         uint256 _premiumPrice = (uint256(priceOfSwappedEth) * 10) / 100;
         uint256 _deadline = block.timestamp + stakingPeriod;
         CallOption memory _callOption = CallOption(
@@ -254,12 +256,9 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
         require(_callOption.isReadyForSell, "Not ready for sell");
         require(!_callOption.isSold, "Already sold");
 
-        int256 _underlyingPrice = getPriceInUSD(usdcOracleAddress);
         uint256 premiumPrice = _callOption.premiumPrice;
-
-        uint256 premiumInToken = (premiumPrice * 10 ** 8) / uint256(_underlyingPrice);
-
-        require(IERC20(underlying).transfer(address(this), premiumInToken), "Transfer failed");
+        uint256 premiumInToken = convertPriceToToken(premiumPrice, usdcOracleAddress);
+        require(IERC20(underlying).transferFrom(msg.sender, address(this), premiumInToken), "Transfer failed");
 
         _callOption.buyer = msg.sender;
         _callOption.isSold = true;
@@ -277,12 +276,11 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
         require(_callOption.buyer == msg.sender, "Not buyer");
         require(!_callOption.isFullyPayed, "Arleady paid");
 
-        int256 _underlyingPrice = getPriceInUSD(usdcOracleAddress);
         uint256 strikePrice = _callOption.strikePrice;
 
-        uint256 strikeInToken = strikePrice * 10 ** 8 / uint256(_underlyingPrice);
+        uint256 strikeInToken = convertPriceToToken(strikePrice, usdcOracleAddress);
 
-        require(IERC20(underlying).transfer(address(this), strikeInToken), "Transfer failed");
+        require(IERC20(underlying).transferFrom(msg.sender, address(this), strikeInToken), "Transfer failed");
 
         _callOption.isFullyPayed = true;
 
@@ -314,12 +312,22 @@ contract BetterBarter is Exchange, Oracle, ReentrancyGuard {
         emit LPAddressSetted(_addr);
     }
 
+    function getCallOption(uint256 _callOptionId) external view returns (CallOption memory) {
+        return callOptions[_callOptionId];
+    }
+
+    function convertPriceToToken(uint256 price, address tokenOracleAddress) public view returns (uint256) {
+        int256 _underlyingPrice = getPriceInUSD(tokenOracleAddress);
+        uint256 tokenAmount = price * 10 ** 8 / uint256(_underlyingPrice);
+        return tokenAmount;
+    }
     /**
      * @notice Used to calculate the strike price
      * @param _price initial asset price
      * @param stakingPeriod The period at which the asset is staked
      */
-    function calculateStrikePrice(int256 _price, uint256 stakingPeriod) internal pure returns (uint256 strikePrice) {
+
+    function calculateStrikePrice(uint256 _price, uint256 stakingPeriod) internal pure returns (uint256 strikePrice) {
         if (stakingPeriod == 7 days) {
             strikePrice = uint256(_price) + (uint256(_price) * 14) / 100;
         } else if (stakingPeriod == 15 days) {

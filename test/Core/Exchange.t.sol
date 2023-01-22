@@ -7,19 +7,20 @@ import "forge-std/console2.sol";
 import "../../src/Helpers/Exchange.sol";
 
 contract TestExchange is Test {
-    address USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address USDCHolder = 0x0A59649758aa4d66E25f08Dd01271e891fe52199;
-    address WETHHolder = 0xF04a5cC80B1E94C69B48f5ee68a08CD2F09A7c3E;
-    address ethHolder = 0x473780deAF4a2Ac070BBbA936B0cdefe7F267dFc;
-    address router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address routerV2 = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    address qouter = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
+    address crETH = 0x0716e8f8F5D85a112aeA660b9D4a4fa17a159f1f;
+    address USDC = 0x07865c6E87B9F70255377e024ace6630C1Eaa37F;
+    address WETH = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
+    address cruiseContract = 0xE3aA7826348EE5559bcF70FE626a3ca6962ffBdC;
+    address usdcOracleAddress = 0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7;
+    address ethOracleAddress = 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e;
+    address routerAddress = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address USDCHolder = 0x75C0c372da875a4Fc78E8A37f58618a6D18904e8;
+    address ethHolder = 0xE807C2a81366dc10a68cd8e95660477294B6019B;
 
     Exchange public exchange;
 
     function setUp() public {
-        exchange = new Exchange(routerV2);
+        exchange = new Exchange(routerAddress);
     }
 
     /**

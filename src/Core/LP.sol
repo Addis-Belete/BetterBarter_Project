@@ -31,7 +31,7 @@ contract LP is ReentrancyGuard, Oracle {
     IERC20 internal underlying;
     address internal betterAddress;
     address internal admin;
-
+    address internal usdcOracleAddress;
     /**
      * @notice Emitted when asset deposited to the pool
      */
@@ -63,11 +63,17 @@ contract LP is ReentrancyGuard, Oracle {
         _;
     }
 
-    constructor(address _receiptTokenAddress, address _underlyingAddress, address _betterAddress) {
+    constructor(
+        address _receiptTokenAddress,
+        address _underlyingAddress,
+        address _betterAddress,
+        address _usdcOracleAddress
+    ) {
         receiptToken = IReceiptToken(_receiptTokenAddress);
         underlying = IERC20(_underlyingAddress);
         betterAddress = _betterAddress;
         admin = msg.sender;
+        usdcOracleAddress = _usdcOracleAddress;
     }
 
     /**
@@ -127,10 +133,10 @@ contract LP is ReentrancyGuard, Oracle {
      */
     function transferLoan(uint256 ethPrice) external onlyBetterAddress returns (uint256) {
         uint256 loanAmount = (ethPrice * 75) / 100;
-        int256 underlyingPrice = getPriceInUSD(address(underlying));
+        int256 underlyingPrice = getPriceInUSD(usdcOracleAddress);
         uint256 loanInToken = (loanAmount * 10 ** 14) / uint256(underlyingPrice); // 10**14 -> 10**6 USDC Decimal 10**8 -> price decimal from chainlink
         console2.log(loanInToken, "Loan In token");
-        require(underlying.transfer(betterAddress, uint256(loanInToken)), "Transfer failed");
+        require(underlying.transfer(betterAddress, loanInToken), "Transfer failed");
         emit LoanTransferred(uint256(loanAmount));
         return uint256(loanInToken);
     }

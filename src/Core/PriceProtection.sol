@@ -22,7 +22,6 @@ contract PriceProtection is Oracle {
     mapping(address => mapping(uint256 => CollateralInfo)) internal collateral; // address => collateralId => CollateralInfo
     mapping(address => uint256) internal userCollateralIds;
     address internal betterAddress;
-    address internal underlying;
     address internal wETH;
     IReceiptToken internal receiptToken;
     address internal admin;
@@ -59,12 +58,14 @@ contract PriceProtection is Oracle {
         _;
     }
 
-    constructor(address _betterAddress, address _receiptTokenaddress)
+    constructor(address _betterAddress, address _receiptTokenaddress, address _weth, address _crEth)
         checkAddress(_betterAddress)
         checkAddress(_receiptTokenaddress)
     {
         betterAddress = _betterAddress;
         receiptToken = IReceiptToken(_receiptTokenaddress);
+        wETH = _weth;
+        crETH = _crEth;
         admin = msg.sender;
     }
 

@@ -9,12 +9,13 @@ import "forge-std/console2.sol";
 contract LPScript is Script {
     address uSDCOnGeorli = 0x07865c6E87B9F70255377e024ace6630C1Eaa37F;
     address betterAddress = 0x402971caf06493EC4fbB180a07f563d9CD2898d2;
+    address usdcOracleAddress;
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
-        ReceiptToken receipt = new ReceiptToken("Better receipt token", "BRT");
-        LP lp = new LP(address(receipt), uSDCOnGeorli, betterAddress);
+        ReceiptToken receipt = new ReceiptToken("Better receipt token", "BRT", 0);
+        LP lp = new LP(address(receipt), uSDCOnGeorli, betterAddress, usdcOracleAddress);
         console2.log("LP deployed too -->", address(lp));
     }
 }

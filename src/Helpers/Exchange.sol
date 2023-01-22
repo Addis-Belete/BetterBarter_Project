@@ -8,14 +8,13 @@ import "forge-std/console2.sol";
 contract Exchange {
     ISwapRouterV2 internal routerV2;
     address internal WETH;
+    uint24 internal _poolFee = 3000;
+    address internal wETH;
+    address internal underlying;
 
     constructor(address _routerAddress) {
         routerV2 = ISwapRouterV2(_routerAddress);
     }
-
-    uint24 internal _poolFee = 3000;
-    address internal wETH;
-    address internal underlying;
 
     /**
      * @notice Used to swap one tokens to anather tokens.
@@ -82,7 +81,7 @@ contract Exchange {
             address[] memory path = new address[](2);
             path[0] = _tokenIn;
             path[1] = _tokenOut;
-            // IERC20(_tokenIn).transferFrom(msg.sender, address(this), _amount);
+            //IERC20(_tokenIn).transferFrom(msg.sender, address(this), _amount);
             IERC20(_tokenIn).approve(address(routerV2), _amount);
             uint256[] memory val =
                 routerV2.swapExactTokensForETH(_amount, amountOutMin[0], path, _recipient, block.timestamp);

@@ -12,13 +12,14 @@ contract BetterBarterScript is Script {
     address usdcOracleAddress = 0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7;
     address ethOracleAddress = 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e;
     address routerAddress = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address wethUniswap = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         console.log(deployerPrivateKey);
         vm.startBroadcast(deployerPrivateKey);
         BetterBarter _better =
-        new BetterBarter(cruiseContract, wETHGeorli, routerAddress, crETH, ethOracleAddress, usdcOracleAddress, uSDCOnGeorli);
+        new BetterBarter(cruiseContract, wETHGeorli, routerAddress, crETH, ethOracleAddress, usdcOracleAddress, uSDCOnGeorli, wethUniswap);
         vm.stopBroadcast();
     }
 }

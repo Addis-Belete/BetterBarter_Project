@@ -7,8 +7,8 @@ import "forge-std/console2.sol";
 
 contract OracleTest is Test {
     Oracle public oracle;
-    address usdcOracleAddress = 0xfE4A8cc5b5B2366C1B58Bea3858e81843581b2F7;
-    address ETHOracleAddress = 0xF9680D99D6C9589e2a93a78A04A279e509205945;
+    address usdcOracleAddress = 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e;
+    address ETHOracleAddress = 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e;
 
     function setUp() public {
         oracle = new Oracle();

@@ -7,6 +7,7 @@ contract ReceiptToken is ERC20 {
     address internal poolAddress;
     address internal admin;
     string private _name;
+    uint8 _type;
 
     /**
      * @notice Emmitted after changeName function executed successfully
@@ -41,9 +42,10 @@ contract ReceiptToken is ERC20 {
      * @param _tokenName The name of the token
      * @param _symbol  The symbol of the token
      */
-    constructor(string memory _tokenName, string memory _symbol) ERC20(_tokenName, _symbol) {
+    constructor(string memory _tokenName, string memory _symbol, uint8 type_) ERC20(_tokenName, _symbol) {
         admin = msg.sender;
         _name = _tokenName;
+        _type = type_;
     }
 
     /**
@@ -55,8 +57,11 @@ contract ReceiptToken is ERC20 {
     }
 
     function decimals() public view virtual override returns (uint8) {
-        return 6;
+        uint8 dec;
+        _type == 0 ? dec = 6 : dec = 18;
+        return dec;
     }
+
     /**
      * @notice Changes the name of the token
      * @dev only called by the admin

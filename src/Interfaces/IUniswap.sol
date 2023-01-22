@@ -110,4 +110,6 @@ interface ISwapRouterV2 {
     function getAmountsOut(uint256 amountIn, address[] memory path) external view returns (uint256[] memory amounts);
 
     function getAmountsIn(uint256 amountOut, address[] memory path) external view returns (uint256[] memory amounts);
+
+    function createPool(address tokenA, address tokenB, uint24 fee) external returns (address pool);
 }
