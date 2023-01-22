@@ -7,6 +7,7 @@ contract ReceiptToken is ERC20 {
     address internal poolAddress;
     address internal admin;
     string private _name;
+    uint8 _type;
 
     /**
      * @notice Emmitted after changeName function executed successfully
@@ -40,12 +41,11 @@ contract ReceiptToken is ERC20 {
      * @notice a constructor used to initailize the necessary variables in the contract
      * @param _tokenName The name of the token
      * @param _symbol  The symbol of the token
-     * @param _adminAddress The address of the admin
      */
-    constructor(string memory _tokenName, string memory _symbol, address _adminAddress) ERC20(_tokenName, _symbol) {
-        require(_adminAddress != address(0), "Invalid address");
-        admin = _adminAddress;
+    constructor(string memory _tokenName, string memory _symbol, uint8 type_) ERC20(_tokenName, _symbol) {
+        admin = msg.sender;
         _name = _tokenName;
+        _type = type_;
     }
 
     /**
@@ -56,11 +56,18 @@ contract ReceiptToken is ERC20 {
         return _name;
     }
 
+    function decimals() public view virtual override returns (uint8) {
+        uint8 dec;
+        _type == 0 ? dec = 6 : dec = 18;
+        return dec;
+    }
+
     /**
      * @notice Changes the name of the token
      * @dev only called by the admin
      * @param _tokenName The new name of the token
      */
+
     function changeName(string memory _tokenName) external onlyAdmin {
         _name = _tokenName;
         emit NameChanged(_tokenName, msg.sender);
